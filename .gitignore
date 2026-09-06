@@ -1,0 +1,16 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.template
+
+# Local overrides
+*.local
+.claude/settings.local.json
+
+# Working artifacts
+tmp/
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
