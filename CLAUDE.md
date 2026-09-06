@@ -6,3 +6,5 @@ Assistant and the Fibaro controllers.
 
 Infrastructure is **operated from here** — read, write, create, delete. No application code, no IaC,
 no service configuration: compose files live in `fbns-docker`.
+
+Store environment variable values in Windows Credential Manager.
