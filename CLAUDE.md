@@ -8,3 +8,6 @@ Infrastructure is **operated from here** — read, write, create, delete. No app
 no service configuration: compose files live in `fbns-docker`.
 
 Store environment variable values in Windows Credential Manager.
+
+Claude Code session sync (Cloudflare R2): `scripts/claude-sync/`, set up per
+`docs/guides/claude-sync-setup.md`.
