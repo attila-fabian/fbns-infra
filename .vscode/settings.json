@@ -1,0 +1,43 @@
+{
+  // Window color: deep moss — tells this repo's VS Code window apart at a glance.
+  // Dark values apply to dark themes; the [*Light*] block covers the light half of
+  // window.autoDetectColorScheme. Editor and syntax colors stay on the active theme.
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#324020",
+    "titleBar.activeForeground": "#FFFFFF",
+    "titleBar.inactiveBackground": "#324020B3",
+    "titleBar.inactiveForeground": "#FFFFFF99",
+    "titleBar.border": "#273414",
+    "activityBar.background": "#324020",
+    "activityBar.foreground": "#FFFFFF",
+    "activityBar.inactiveForeground": "#FFFFFF99",
+    "activityBar.border": "#273414",
+    "activityBarBadge.background": "#273414",
+    "activityBarBadge.foreground": "#FFFFFF",
+    "statusBar.background": "#273414",
+    "statusBar.foreground": "#FFFFFF",
+    "statusBar.border": "#273414",
+    "statusBarItem.hoverBackground": "#324020",
+    "statusBarItem.remoteBackground": "#273414",
+    "statusBarItem.remoteForeground": "#FFFFFF",
+    "[*Light*]": {
+      "titleBar.activeBackground": "#D6E7C3",
+      "titleBar.activeForeground": "#303D1D",
+      "titleBar.inactiveBackground": "#D6E7C3B3",
+      "titleBar.inactiveForeground": "#303D1D99",
+      "titleBar.border": "#C6D6B4",
+      "activityBar.background": "#D6E7C3",
+      "activityBar.foreground": "#303D1D",
+      "activityBar.inactiveForeground": "#303D1D99",
+      "activityBar.border": "#C6D6B4",
+      "activityBarBadge.background": "#C6D6B4",
+      "activityBarBadge.foreground": "#303D1D",
+      "statusBar.background": "#C6D6B4",
+      "statusBar.foreground": "#303D1D",
+      "statusBar.border": "#C6D6B4",
+      "statusBarItem.hoverBackground": "#D6E7C3",
+      "statusBarItem.remoteBackground": "#C6D6B4",
+      "statusBarItem.remoteForeground": "#303D1D"
+    }
+  }
+}
