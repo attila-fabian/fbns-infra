@@ -17,11 +17,20 @@ winget install --id GoLang.Go -e
 go install -ldflags "-s -w -X main.version=1.17.1" github.com/tawanorg/claude-sync/cmd/claude-sync@v1.17.1
 ```
 
-Lands in `%USERPROFILE%\go\bin\claude-sync.exe`. Make sure that directory is on PATH, then open a new terminal:
+The `winget` step puts `go` in `C:\Program Files\Go\bin`, which the shell you ran it from does not know
+about yet — either open a new terminal before `go install`, or prepend it for the current one with
+`$env:PATH = "$env:PATH;C:\Program Files\Go\bin"`.
+
+`claude-sync.exe` lands in `%USERPROFILE%\go\bin`. Put that directory on PATH:
 
 ```powershell
 [Environment]::SetEnvironmentVariable('PATH', "$([Environment]::GetEnvironmentVariable('PATH','User'));$env:USERPROFILE\go\bin", 'User')
 ```
+
+That writes the user PATH; already-open terminals keep the old one, so
+`claude-sync: The term 'claude-sync' is not recognized` after this step means the shell is stale, not the
+install. Open a new terminal, or patch the current one with
+`$env:PATH = "$env:PATH;$env:USERPROFILE\go\bin"`.
 
 Never `npm install -g @tawandotorg/claude-sync` on Windows — its postinstall 404s and leaves broken
 shims in `%APPDATA%\npm` that shadow the real binary.
@@ -53,7 +62,8 @@ cd fbns-infra
 ```
 
 Reads the credential, runs `claude-sync init --provider r2 --scope sessions`, then hardens the config
-directory. Prompts for the encryption passphrase — **the same one as every other machine**. Look for
+directory. Prompts for the encryption passphrase — a second, unrelated secret, not the Secret Access Key
+from step 3, and **the same one as every other machine**. Look for
 `Encryption key verified`; without it the passphrase differs and you will not decrypt anything.
 
 A fresh token needs ~30 s to propagate. A `403 Forbidden` on the connection test right after creating
@@ -69,7 +79,37 @@ claude-sync status
 Home directories are remapped on pull, so `claude --resume` finds sessions written under a different
 username or path.
 
+The first `pull` on a machine that already has local sessions asks what to do with them — pick
+**Backup existing files, then pull**. Local-only sessions are listed `KEEP` and survive; `push` uploads
+them afterwards. The prompt needs a real terminal: run non-interactively and it dies with
+`Error: Incorrect function.` before changing anything. `--force` answers it by overwriting with no
+backup, so do not reach for it to get past that error.
+
+### 6. Turn on auto-sync
+
+```powershell
+claude-sync auto enable
+claude-sync auto status
+```
+
+Writes two hooks into `~/.claude/settings.json` — `SessionStart → claude-sync pull -q` and
+`Stop → claude-sync push -q` — leaving any hooks already there alone. Idempotent, `--dry-run` shows the
+diff first, `claude-sync auto disable` removes them.
+
+Neither hook passes `--force`, so a conflicting pull fails instead of overwriting.
+
+Two things to know:
+
+- The hooks call `claude-sync` by bare name, so the Claude Code process has to see the PATH entry from
+  step 1. Anything started before that edit inherits the old PATH and the hooks quietly do nothing —
+  restart the terminal or the editor once after enabling.
+- `Stop` fires when the assistant finishes a response, not when the session closes, so expect a push per
+  turn rather than one per sitting. Pushes are incremental and `-q`, so this is cheap, just chatty.
+
 ## Daily use
+
+Nothing, with auto-sync on. Manual equivalents, for a machine without the hooks or when a sync has to
+happen right now:
 
 ```powershell
 claude-sync pull    # sitting down
