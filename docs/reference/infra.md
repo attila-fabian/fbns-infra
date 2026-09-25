@@ -11,3 +11,32 @@ Synology NAS. Docker host for `*.fbns.eu`.
 | DSM | port `443` |
 
 `Y:` = `\FBNS\docker` = `/volume1/docker` — same files over SMB and SSH.
+
+## Fedora
+
+Headless Fedora 43 server on the LAN. Runs Claude Code sessions, dev work and the paddle-map Overpass API.
+
+| | |
+|---|---|
+| Host | `fedora` · `fedora.local` (mDNS) · `10.2.0.51` (DHCP reservation on the UniFi router) |
+| SSH | `ssh fedora`, user `attilafabian`, key from the Bitwarden SSH agent |
+| Hardware | 24 CPUs, 92 GiB RAM |
+| Disks | `/` xfs on LVM `fedora-root` (NVMe, holds `/home`) · `/data` btrfs, second NVMe, unused |
+| Tools | rootless Podman, git, Node, `gh`, Claude Code (`~/.local/bin/claude`); repos in `~/projects` |
+
+- **SSH from Windows needs Windows OpenSSH.** Git Bash's own `ssh` cannot reach the Bitwarden agent
+  pipe (`Permission denied (publickey)`), so `~/.bashrc` puts `/c/Windows/System32/OpenSSH` first on
+  `PATH`. Shells that skip `.bashrc` must call `ssh.exe` by that path.
+- `sudo` needs a password; run root steps by hand. Linger is on, so user services start at boot.
+- firewalld zone `FedoraServer`. Only extra rule: TCP `12345` from `10.2.0.0/24`. Never forward it from
+  the router.
+- LAN DNS (`10.2.0.22`/`.23`) has no `fedora` entry — use `fedora.local` or the IP.
+- ⏳ GitHub SSH from the box not set up (`git@github.com` host key unknown, no key).
+
+### Overpass API
+
+`http://fedora.local:12345/api/interpreter` — Overpass for paddle-map's `npm run data`. Quadlet
+`~/.config/containers/systemd/overpass.container` (user unit `overpass.service`), database in
+`~/overpass/db`, rebuilt by `~/overpass/refresh.sh` (service is down during a rebuild). Setup and
+reasons: [paddle-map `docs/plans/260925-own-overpass.md`](../../../paddle-map/docs/plans/260925-own-overpass.md).
+On the box use `127.0.0.1`, not `localhost` (rootless Podman forwards IPv4 only).
