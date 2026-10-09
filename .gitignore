@@ -14,3 +14,8 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local agent-compat junctions into .claude/ (git follows junctions; recreate per clone)
+/.agents/skills/
+/.agents/agents/
+/.agents/rules/
