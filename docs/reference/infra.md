@@ -29,12 +29,16 @@ Headless Fedora 43 server on the LAN. Runs Claude Code sessions, dev work and th
 | SSH | `ssh fedora`, user `attilafabian`, key from the Bitwarden SSH agent |
 | Hardware | 24 CPUs, 92 GiB RAM |
 | Disks | `/` xfs on LVM `fedora-root` (NVMe, holds `/home`) · `/data` btrfs, second NVMe, unused |
-| Tools | rootless Podman, git, Node, `gh`, Claude Code (`~/.local/bin/claude`); repos in `~/projects` |
+| Tools | rootless Podman, git, Node 24, `gh` (authenticated), Claude Code (`~/.local/bin/claude`); repos in `~/projects` |
 
 - **SSH from Windows needs Windows OpenSSH.** Git Bash's own `ssh` cannot reach the Bitwarden agent
   pipe (`Permission denied (publickey)`), so `~/.bashrc` puts `/c/Windows/System32/OpenSSH` first on
   `PATH`. Shells that skip `.bashrc` must call `ssh.exe` by that path.
 - `sudo` needs a password; run root steps by hand. Linger is on, so user services start at boot.
+- **Node 24 sits beside the distro's Node 22.** `nodejs24` + `nodejs24-npm` ship `/usr/bin/node-24`,
+  `npm-24`, `npx-24`; `/usr/bin/node` stays 22. Symlinks `~/.local/bin/{node,npm,npx}` → `*-24` make
+  v24 the default for `attilafabian` (first on `PATH`). systemd units do not read that `PATH`: call
+  `/usr/bin/node-24` there. Remove the symlinks to fall back to 22.
 - firewalld zone `FedoraServer`. Only extra rule: TCP `12345` from `10.2.0.0/24`. Never forward it from
   the router.
 - LAN DNS (`10.2.0.22`/`.23`) has no `fedora` entry — use `fedora.local` or the IP.
