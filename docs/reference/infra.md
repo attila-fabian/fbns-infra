@@ -51,3 +51,12 @@ Headless Fedora 43 server on the LAN. Runs Claude Code sessions, dev work and th
 `~/overpass/db`, rebuilt by `~/overpass/refresh.sh` (service is down during a rebuild). Setup and
 reasons: [paddle-map `docs/plans/260925-own-overpass.md`](../../../paddle-map/docs/plans/260925-own-overpass.md).
 On the box use `127.0.0.1`, not `localhost` (rootless Podman forwards IPv4 only).
+
+### GitHub Actions runner (E29eu)
+
+User `gh-runner` (uid 1001, linger on, `ssh gh-runner@10.2.0.51` with the same key). Quadlet
+`~/.config/containers/systemd/gh-runner.container` (user unit `gh-runner.service`) runs
+`ghcr.io/actions/actions-runner`; `~/.config/gh-runner/start.sh` takes a one-job JIT config, so each
+job gets a fresh container. PAT in `~/.config/gh-runner/runner.env` (mode 600).
+`podman-auto-update.timer` keeps the image current. Setup and rollback:
+[e29-infra `docs/plans/261017-fedora-actions-runner.md`](../../../e29-infra/docs/plans/261017-fedora-actions-runner.md).
