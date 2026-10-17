@@ -8,8 +8,9 @@ Box: `ssh fedora` (`10.2.0.51`, user `attilafabian`), repos in `~/projects`. Det
 
 **Do not touch `overpass.service` or its port `12345` rule.** The box runs the paddle-map Overpass API.
 
-Safety comes from what the box can reach: no NAS access, no production MCP servers, a GitHub token
-limited to the agent's repos, and a protected `main`.
+Safety comes from what the box can reach: no NAS access and no production MCP servers. GitHub is
+open by choice: the `gh` token stays broad (`repo`, `workflow`) and `main` is not protected, so the
+agent may edit anything on GitHub.
 
 Rules for the executing agent:
 
@@ -36,36 +37,32 @@ grep -i env ~/.claude/settings.json 2>/dev/null
 Report as a short table: NAS mounts and credentials, secrets, production MCP servers, `gh` token
 scope.
 
+Findings (2026-10-17):
+
+| Check | Result |
+| --- | --- |
+| ✅ NAS mounts | No CIFS or NFS mounts, no `fstab` entries. `fusectl` and `rpc_pipefs` are kernel pseudo-filesystems. |
+| ✅ NAS credentials | No `~/.smbcredentials`, `~/.git-credentials` or `~/.netrc`. |
+| ✅ SSH keys | `~/.ssh` holds only `authorized_keys` and `known_hosts`. No private keys, so the box cannot SSH out. The laptop's `Host fedora` entry has no `ForwardAgent`. |
+| ✅ Secrets in env | Only `DEBUGINFOD_IMA_CERT_PATH`, a Fedora default. |
+| ✅ MCP servers | None at user level, no `~/projects/*/.mcp.json`. |
+| ✅ `~/.claude/settings.json` env | None. |
+| ⏭️ `gh` token | OAuth `gho_` token, scopes `repo`, `workflow`, `read:org`, `gist`. `git` authenticates through `gh auth git-credential`. Kept broad by choice. |
+| ✅ Tools | `tmux`, `gh` and `claude` installed. |
+
+Risk accepted with the broad token: prompt injection from issues, PRs, web pages or dependency
+docs can steer a YOLO agent, and the `workflow` scope can change Actions workflows and expose repo
+secrets. No branch protection on `main`, so the agent can push or force-push straight to it. Git
+history and GitHub are the only recovery path.
+
 ### Step 2: Remove write paths
 
-Propose each removal, the user decides:
-
-- NAS mounts, fstab entries and credentials
-- production MCP servers: `claude mcp remove <name>`
-- broad `gh` token
-
-Replace the `gh` token with a fine-grained PAT: only the agent's repos; Contents and Pull requests
-read/write, Metadata read; nothing else. User runs on the box:
-
-```bash
-gh auth login --with-token < token.txt && rm token.txt
-gh auth setup-git
-```
-
-On the laptop, check each repo:
-
-```bash
-gh api repos/<owner>/<repo>/branches/main/protection \
-  --jq '{enforce_admins: .enforce_admins.enabled, force_push: .allow_force_pushes.enabled}'
-```
-
-Expected: `enforce_admins: true`, `force_push: false`.
+⏭️ Nothing to do. Step 1 found no NAS mounts, credentials or MCP servers. The broad `gh` token and
+the unprotected `main` stay by choice.
 
 ### Step 3: Persistent session
 
-User runs: `sudo dnf install -y tmux`
-
-Then from the laptop:
+`tmux` is already installed. From the laptop:
 
 ```bash
 ssh -t fedora tmux new -A -s claude
@@ -75,8 +72,7 @@ cd ~/projects/<repo> && claude --dangerously-skip-permissions
 
 The session keeps running after you disconnect. The same `ssh` command reattaches it.
 
-**Done when:** no NAS mounts, no production MCP servers, `git push` to a feature branch works, and
-the tmux session reattaches.
+**Done when:** `git push` works from the box and the tmux session reattaches.
 
 ## Part 2: Mobile access
 
