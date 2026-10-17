@@ -7,8 +7,15 @@ Synology NAS. Docker host for `*.fbns.eu`.
 | | |
 |---|---|
 | Host | `FBNS.local` · `10.2.0.6` |
-| SSH | port `2222`, publickey only |
+| SSH | `ssh fbns`, port `22`, LAN only, user `Attila Fabian`, key from the Bitwarden SSH agent (item `FBNS NAS SSH`) |
 | DSM | port `443` |
+| Gitea SSH | port `2222` on the NAS IP (`gitea/compose.yaml` maps `2222:22`). Not the NAS shell |
+
+- Key is in `~/.ssh/authorized_keys`, under the user home service (`/var/services/homes` →
+  `/volume2/homes`). The user must be in DSM `administrators` to log in. sshd StrictModes needs home
+  `755`, `.ssh` `700`, `authorized_keys` `600`.
+- DSM `sshd_config` still has `PasswordAuthentication yes`. That is acceptable while port 22 is not
+  forwarded from the router.
 
 `Y:` = `\FBNS\docker` = `/volume1/docker` — same files over SMB and SSH.
 
