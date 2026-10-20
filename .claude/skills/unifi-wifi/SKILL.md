@@ -14,8 +14,9 @@ description: >-
   Not for firewall policy between networks (unifi-firewall), wired port and
   client operations (unifi-clients).
 compatibility: >-
-  UniFi Network with adopted UniFi APs. Channel and DFS specifics below are US
-  regulatory domain. Verified on Network 10.4.57 with AC and WiFi 6 hardware.
+  UniFi Network with adopted UniFi APs. Channel and DFS specifics below are EU
+  (ETSI) regulatory domain; the field observations came from a US site. Verified
+  on Network 10.4.57 with AC and WiFi 6 hardware.
 ---
 
 # UniFi Wi-Fi
@@ -117,25 +118,23 @@ The failure that motivated this skill, because it is a change that looks free.
 
 Setting every 5 GHz radio to 80 MHz doubles the theoretical per-client rate, so
 it reads like a pure upgrade. It is not, because **width is bought with
-channels.** In the US regulatory domain, 80 MHz with DFS channels disabled leaves
-exactly **two** non-overlapping blocks:
+channels.** In the EU (ETSI), 80 MHz with DFS channels disabled leaves exactly
+**one** block: channels 36 / 40 / 44 / 48. Channels 149-165 are not available to
+UniFi APs on most EU country codes, so the US escape hatch does not exist here.
 
-- UNII-1: channels 36 / 40 / 44 / 48
-- UNII-3: channels 149 / 153 / 157 / 161
-
-Two blocks. If you have more than two 5 GHz APs with overlapping coverage, some
-of them are sharing an 80 MHz block and taking turns transmitting. Wi-Fi degrades
+One block. If you have more than one 5 GHz AP with overlapping coverage and DFS
+off, they are sharing an 80 MHz block and taking turns transmitting. Wi-Fi degrades
 gracefully in signal terms and catastrophically in contention terms: everything
 looks healthy right up until two clients are busy simultaneously.
 
-The observed case: four APs, three of them in-wall units on adjacent walls, all
-piled into UNII-1 after a global switch to 80 MHz. Result was roughly **32 Mbps
+The observed case (US site): four APs, three of them in-wall units on adjacent
+walls, all piled into 36-48 after a global switch to 80 MHz. Result was roughly **32 Mbps
 on a gigabit connection**, with an 866 Mbps PHY link at -57 dBm and a confirmed
 1276 Mbps gateway speedtest. Neither ISP, backhaul, nor signal was the cap.
 
 **Do not disable DFS channels when auditing a channel plan.** It is the change
-that creates the pileup. DFS is the difference between two usable 80 MHz blocks
-and six.
+that creates the pileup. In the EU, DFS is the difference between one usable 80
+MHz block and four.
 
 ### Pick a block, not a channel
 
@@ -144,16 +143,16 @@ the *same* block are fully co-channel with each other. This is the mistake to
 avoid when spreading APs out: moving an AP from 48 to 104 accomplishes nothing if
 another AP already sits on 100.
 
-US 80 MHz blocks:
+EU 80 MHz blocks:
 
-| Block | Channels | DFS? |
+| Channels | DFS? | Notes |
 |---|---|---|
-| UNII-1 | 36, 40, 44, 48 | no |
-| | 52, 56, 60, 64 | yes |
-| | 100, 104, 108, 112 | yes |
-| | 116, 120, 124, 128 | yes, and see below |
-| | 132, 136, 140, 144 | yes |
-| UNII-3 | 149, 153, 157, 161 | no |
+| 36, 40, 44, 48 | no | the only non-DFS block |
+| 52, 56, 60, 64 | yes | |
+| 100, 104, 108, 112 | yes | |
+| 116, 120, 124, 128 | yes | weather radar, see below |
+| 132, 136, 140 | yes | 40 MHz max: channel 144 is not allowed in the EU |
+| 149-165 | | not available on most EU country codes |
 
 Map what you have to blocks before choosing a target, because the channel numbers
 hide the collision:
@@ -161,7 +160,7 @@ hide the collision:
 ```bash
 udm devices --json | python3 -c '
 import json,sys
-B=([36,40,44,48],[52,56,60,64],[100,104,108,112],[116,120,124,128],[132,136,140,144],[149,153,157,161])
+B=([36,40,44,48],[52,56,60,64],[100,104,108,112],[116,120,124,128],[132,136,140])
 blk=lambda c: next(("%d-%d"%(b[0],b[-1]) for b in B if c in b), "?")
 for d in json.load(sys.stdin):
     for s in d.get("radio_table_stats") or []:
@@ -169,20 +168,20 @@ for d in json.load(sys.stdin):
             print(d.get("name"), "ch", s.get("channel"), "-> block", blk(s["channel"]))'
 ```
 
-**Prefer 52-64, 100-112, and 132-144 when you need free blocks.** The 116-128
-block overlaps terminal doppler weather radar (TDWR, 5600-5650 MHz) in the US,
-where a CAC can run ten minutes instead of one, and the channels are sometimes
-unavailable outright. An 80 MHz block anchored at 116 spans 116/120/124/128 =
-5570-5650 MHz, so it swallows the whole TDWR sub-band: at 80 MHz you cannot
-sit near 116 without sitting *in* it.
+**Prefer 52-64 and 100-112 when you need free 80 MHz blocks.** The 116-128
+block overlaps the weather-radar band (5600-5650 MHz), where ETSI requires a
+**ten-minute** CAC instead of one minute, and some APs and country codes exclude
+those channels outright. An 80 MHz block anchored at 116 spans 116/120/124/128 =
+5570-5650 MHz, so it swallows the whole radar sub-band: at 80 MHz you cannot sit
+near 116 without sitting *in* it. Use 132/136 at 40 MHz as the overflow slot.
 
 ### If an AP keeps falling off a DFS channel, stop restarting it
 
 An AP assigned a DFS channel can run there for a week or two, hit a radar
 detection (real or false), quietly move to a non-DFS channel, and **keep reporting
 the assigned channel in its config the whole time**. Nothing alarms, nothing logs
-it, and `rest/device` echoes back whatever you last wrote. One deployment sat like
-this for **twelve days**: config said 116, the radio was on 149, stacked on top of
+it, and `rest/device` echoes back whatever you last wrote. One deployment (US
+site, where 149-161 is non-DFS) sat like this for **twelve days**: config said 116, the radio was on 149, stacked on top of
 two APs already sharing the 149-161 block, at 33% and 30% channel utilization
 while every other AP sat at 1-2%. Every check had read the config.
 
@@ -192,7 +191,8 @@ for that site. **Retire it and take an extra co-channel share instead.** Moving
 that AP to a non-DFS block took it from 33% to 7% utilization and its neighbour
 from 21% to 12%. A share you chose beats a channel the AP cannot hold, so pair
 whichever APs are furthest apart physically: different floors beats different
-rooms.
+rooms. In the EU the only non-DFS fallback is 36-48, so retiring a DFS block
+means sharing that one.
 
 **Audit live-vs-config, not either one alone,** on a schedule rather than only
 after a write. A radio that drifts once will drift again.

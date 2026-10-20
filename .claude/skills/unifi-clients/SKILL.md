@@ -131,7 +131,7 @@ udm raw POST /proxy/network/api/s/default/cmd/stamgr \
 
 Worth a periodic sweep. A reservation table full of dead entries is where a stale
 DHCP reservation quietly hands a live device the wrong address, and it makes the
-inventory in `unifi-context-map` much harder to keep honest.
+inventory in `docs/reference/infra.md` much harder to keep honest.
 
 **Reservations are not reality.** A fixed-IP reservation only applies if the
 device asks that DHCP server. A camera with a reservation on the camera VLAN that

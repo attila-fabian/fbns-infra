@@ -5,10 +5,7 @@ Adapted from dlewis7444/unifi-claude-skill (MIT), trimmed and reorganized.
 
 Auth: X-API-Key. The key is read from UNIFI_API_KEY, or from an env file
 (UNIFI_ENV_FILE, default ~/.config/unifi/env) containing UNIFI_API_KEY=...
-Mint a key with POST /proxy/users/api/v2/user/self/keys; see SKILL.md.
-
-The legacy Protect API (/proxy/protect/api/*) rejects API keys with 401. Use
-the `protect` command (integration API) or the cookie login flow in SKILL.md.
+In fbns-infra, scripts/unifi/udm.ps1 injects both from Windows Credential Manager.
 
 Config:
   UDM_HOST        gateway address, required (e.g. 192.0.2.1)
@@ -60,7 +57,7 @@ def host() -> str:
 def api_key() -> str:
     k = env_value("UNIFI_API_KEY")
     if not k:
-        sys.exit(f"UNIFI_API_KEY not set (env or {ENV_FILE}). See SKILL.md to mint one.")
+        sys.exit(f"UNIFI_API_KEY not set (env or {ENV_FILE}). Run through scripts/unifi/udm.ps1.")
     return k
 
 
@@ -77,10 +74,6 @@ def legacy() -> str:
 
 def v2() -> str:
     return f"https://{host()}/proxy/network/v2/api/site/{SITE}"
-
-
-def protect_base() -> str:
-    return f"https://{host()}/proxy/protect/integration/v1"
 
 
 def readonly() -> bool:
@@ -231,14 +224,11 @@ def dpi(a):
     return req("GET", f"{legacy()}/stat/sitedpi?type=by_app")
 
 
-@cmd("protect", "Protect integration API: cameras | raw <path> (e.g. /sensors)")
-def protect(a):
-    path = a[1] if a and a[0] == "raw" else "/cameras"
-    return req("GET", f"{protect_base()}{path}")
-
-
 @cmd("raw", "raw <METHOD> <path> ['<json>'] - any /proxy/* or /api/* path")
 def raw(a):
+    # Without a leading "/" the path joins the host ("@evil.example/..."), sending the key elsewhere.
+    if not a[1].startswith("/"):
+        sys.exit(f"raw path must start with /: {a[1]}")
     body = json.loads(a[2]) if len(a) > 2 else None
     return req(a[0].upper(), f"https://{host()}{a[1]}", body)
 
