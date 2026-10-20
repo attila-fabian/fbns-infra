@@ -19,20 +19,31 @@ Synology NAS. Docker host for `*.fbns.eu`.
 
 `Y:` = `\FBNS\docker` = `/volume1/docker` — same files over SMB and SSH.
 
-- **Docker needs `sudo`.** `/var/run/docker.sock` is `root:root`; the user runs `sudo docker ...` on
-  request. Agents read container state from Dozzle instead (`http://10.2.0.6:8888`, LAN, no auth,
-  read-only). Container list from its SSE stream:
+- **Docker without `sudo`.** DSM group `docker` has one member, `Attila Fabian`. `dockerd` gives
+  `/var/run/docker.sock` to that group at every start (`root:docker`, mode `660`). ⚠️ This makes the
+  `FBNS NAS SSH` key passwordless root on the NAS.
+- Run `ssh fbns '/usr/local/bin/docker ...'`. Use the full path, because `/usr/local/bin` is not on
+  the non-interactive `PATH`. From Git Bash, prefix the command with `MSYS_NO_PATHCONV=1`. Without it,
+  Git Bash rewrites `/usr/...` into a Windows path.
 
-  ```bash
-  python -c "
-  import json,urllib.request
-  for l in urllib.request.urlopen('http://10.2.0.6:8888/api/events/stream',timeout=5):
-      if l.startswith(b'data: '):
-          for c in sorted(json.loads(l[6:]),key=lambda c:c['name']): print(f\"{c['name']:26}{c['state']:10}{c['image']}\")
-          break"
-  ```
+## FBNSBK NAS
 
-  Dockhand (`:3000`) has auth on and is not used by agents.
+Synology DS224+ in Slovakia. Off-site backup target, and the host that runs Active Backup for
+Microsoft 365 against `e29.eu` (e29-infra `docs/reference/services.md` → Synology NAS).
+
+| | |
+|---|---|
+| Host | `10.5.0.5`, reached over Tailscale only |
+| SSH | `ssh fbnsbk`, port `22`, user `Attila Fabian`, key from the Bitwarden SSH agent (item `FBNSBK NAS SSH`) |
+| DSM | `https://10.5.0.5:5791`, same login as FBNS |
+
+- **SSH keys live outside home**, same as E29HU. The user home service is off, so `sshd_config`
+  line 1 is `AuthorizedKeysFile .ssh/authorized_keys /etc/ssh/keys/%u`. The key file is
+  `/etc/ssh/keys/Attila Fabian`, root-owned `644` in a `755` dir, because sshd reads it as the
+  user. Every login prints `Could not chdir to home directory`; ignore it.
+- A DSM update may reset `/etc`. Password login still works then; re-add the line and the file.
+- The user must be in DSM `administrators` to log in. Password login is still on. Never forward port
+  `22` from the router.
 
 ## Fedora
 

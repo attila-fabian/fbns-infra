@@ -11,3 +11,6 @@ Store environment variable values in Windows Credential Manager.
 
 Claude Code session sync (Cloudflare R2): `scripts/claude-sync/`, set up per
 `docs/guides/claude-sync-setup.md`.
+
+SSH key login to a new NAS or server: `docs/guides/ssh-key-setup.md`. Guide the user one step at a
+time; they paste output back.
