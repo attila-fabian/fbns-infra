@@ -33,7 +33,7 @@ Microsoft 365 against `e29.eu` (e29-infra `docs/reference/services.md` → Synol
 
 | | |
 |---|---|
-| Host | `10.5.0.5`, reached over Tailscale only |
+| Host | `10.5.0.5` over Tailscale · `100.110.13.100` over NetBird |
 | SSH | `ssh fbnsbk`, port `22`, user `Attila Fabian`, key from the Bitwarden SSH agent (item `FBNSBK NAS SSH`) |
 | DSM | `https://10.5.0.5:5791`, same login as FBNS |
 
@@ -44,6 +44,28 @@ Microsoft 365 against `e29.eu` (e29-infra `docs/reference/services.md` → Synol
 - A DSM update may reset `/etc`. Password login still works then; re-add the line and the file.
 - The user must be in DSM `administrators` to log in. Password login is still on. Never forward port
   `22` from the router.
+- **Docker without `sudo`**, same setup as FBNS. ⚠️ The `FBNSBK NAS SSH` key is passwordless root.
+  Run `ssh fbnsbk '/usr/local/bin/docker ...'`.
+
+## NetBird
+
+NetBird Cloud (`app.netbird.io`), login `attila.fabian@live.com`. Default `All -> All` policy. Every
+peer runs client `0.81.3` and is named `<peer>.netbird.cloud`.
+
+| Peer | NetBird IP | Install |
+|---|---|---|
+| `attila-asusb9406` (laptop) | `100.110.144.43` | `winget`, SSO login, expires every 30 days |
+| `fedora` | `100.110.35.178` | `install.sh`, DNF repo, kernel WireGuard |
+| `fbnsbk` | `100.110.13.100` | Synology native, see below |
+| `e29hu` | `100.110.141.95` | Synology native |
+| `e29pt` | `100.110.183.64` | Synology native |
+
+- **Synology peers** run the native client from `install.sh`: `/usr/local/bin/netbird`, systemd
+  unit `netbird.service` (enabled), userspace WireGuard because DSM has no kernel module. A DSM
+  update can remove it; then re-run `install.sh` and `netbird up`.
+- Tailscale stays installed on the NAS next to NetBird.
+- ⏳ FBNS NAS, phone, LAN routing peer `netbird-gw`. Design in git history:
+  `docs/plans/261019-netbird-clients.md`.
 
 ## Fedora
 

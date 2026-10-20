@@ -1,16 +1,28 @@
-# fbns-infra — family infra management
+# fbns-infra - family infra management
 
-Management workspace and index for the Fabian home/office estate: the `10.2.0.0/24` network, both
-FBNS Synology NAS, the Proxmox node, the Fedora workstation, the Docker services on `*.fbns.eu`, Home
-Assistant and the Fibaro controllers.
+Management workspace for the Fabian home/office estate: `10.2.0.0/24` network, both FBNS Synology
+NAS, Proxmox node, Fedora workstation, Docker services on `*.fbns.eu`, Home Assistant, Fibaro
+controllers. Estate map: [infra.md](docs/reference/infra.md).
 
-Infrastructure is **operated from here** — read, write, create, delete. No application code, no IaC,
-no service configuration: compose files live in `fbns-docker`.
+Operated **from here**: read, write, create, delete. No application code, no IaC, no service
+configuration: compose files live in `fbns-docker`.
 
-Store environment variable values in Windows Credential Manager.
+Store passwords and secrets in Windows Credential Manager, SSH keys in Bitwarden . Credential
+Manager target name: `<system>-<purpose>`.
 
-Claude Code session sync (Cloudflare R2): `scripts/claude-sync/`, set up per
-`docs/guides/claude-sync-setup.md`.
+Name new files in `docs/plans/` and `docs/backlog/` `YYMMDD-<slug>.md`.
 
-SSH key login to a new NAS or server: `docs/guides/ssh-key-setup.md`. Guide the user one step at a
-time; they paste output back.
+## Minimalism
+
+Read the target and its live state first. Then stop at the first rung that holds:
+
+1. Needed at all? Speculative need = skip it, say so in one line.
+2. Already exists? Reuse a script in `scripts/`, a `unifi-*` skill, or a doc section.
+3. Platform setting covers it? DSM, UniFi, Home Assistant built-in over a custom script.
+4. Existing tool does it? `ssh`, `scripts/unifi/udm.ps1`, an MCP. No new script for a one-off command.
+5. Only then: the smallest change that works.
+
+- Fix the root cause, not the symptom.
+- No speculative resources, settings or scaffolding "for later".
+- Deletion over addition. Fewest files, shortest diff.
+- Never simplify away: security, access control, backups, anything explicitly requested.

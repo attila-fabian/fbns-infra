@@ -43,7 +43,7 @@ Host $alias
 
 ## 4. Put the key on the host
 
-### Synology without user home service (FBNSBK, E29HU)
+### Synology without user home service (FBNSBK, E29HU, E29PT)
 
 Log in with the DSM password. Ignore `Could not chdir to home directory`.
 
