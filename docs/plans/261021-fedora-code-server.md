@@ -53,7 +53,7 @@ password auth covers that. Tightening the policy belongs to the
 ✅ **1. Check the box.** 2026-10-21: nothing on `8080`, no code-server installed, `wt0` in no zone.
 LAN DNS already resolves `code.fbns.eu` and `vscode.fbns.eu` to Traefik `10.2.0.20`.
 
-⏳ **2. Install code-server.** Standalone method, no `sudo`, into `~/.local/lib` and
+✅ **2. Install code-server.** 2026-10-21: 4.141.0. Standalone method, no `sudo`, into `~/.local/lib` and
 `~/.local/bin/code-server`:
 
 ```bash
@@ -62,7 +62,7 @@ curl -fsSL https://code-server.dev/install.sh | sh -s -- --method=standalone
 
 Update later by running the same command again.
 
-⏳ **3. Configure.** Run `code-server` once and stop it with Ctrl+C. The first start writes
+🚧 **3. Configure.** 2026-10-21: config written, `bind-addr` set, password in Credential Manager. Bitwarden item pending. Run `code-server` once and stop it with Ctrl+C. The first start writes
 `~/.config/code-server/config.yaml` with a random password. Change only `bind-addr`:
 
 ```yaml
@@ -78,7 +78,7 @@ Credential Manager as `fedora-code-server` (repo rule) and into Bitwarden as ite
 `http://fedora.netbird.cloud:8080`, so the phone autofills it. The file on the box stays the source;
 after a password change, update both copies.
 
-⏳ **4. User service.** `~/.config/systemd/user/code-server.service`:
+✅ **4. User service.** 2026-10-21: enabled, listening on `0.0.0.0:8080`. `~/.config/systemd/user/code-server.service`:
 
 ```ini
 [Unit]
@@ -99,7 +99,7 @@ Linger is already on, so the service starts at boot.
 systemctl --user daemon-reload && systemctl --user enable --now code-server
 ```
 
-⏳ **5. Firewall (user, `sudo`).**
+✅ **5. Firewall (user, `sudo`).** 2026-10-21: direct LAN `10.2.0.51:8080` times out, Traefik and NetBird get through.
 
 ```bash
 sudo firewall-cmd --permanent --zone=FedoraServer \
@@ -111,7 +111,7 @@ sudo firewall-cmd --reload
 
 Never forward `8080` from the router.
 
-⏳ **6. Remove the NAS code-server.** Its only volume is `./data` (80M: settings, extensions,
+✅ **6. Remove the NAS code-server.** 2026-10-21: archived (26M), container down, directory deleted. Its only volume is `./data` (80M: settings, extensions,
 `.claude`). Archive it to the NAS home folder, outside the `fbns-docker` repo (it holds
 credentials), then stop and delete it:
 
@@ -123,8 +123,8 @@ ssh fbns 'cd /volume1/docker/code-server && tar czf ~/code-server-data-261021.tg
 Then delete `code-server/` in `fbns-docker` (`Y:\code-server`). This removes the
 `code-server@docker` router for `code.fbns.eu`, so the file route in step 7 does not collide with it.
 
-⏳ **7. Traefik route.** In `fbns-docker` `traefik/config/config.yml` (file provider, `watch: true`,
-no restart needed), under `routers`:
+✅ **7. Traefik route.** 2026-10-21: both names return 200 with a valid certificate. In `fbns-docker`
+`traefik/config/config.yml` (file provider, `watch: true`), under `routers`:
 
 ```yaml
     code-server:
@@ -146,6 +146,9 @@ and under `services`:
           - url: "http://10.2.0.51:8080"
 ```
 
+`config.yml` is a single-file bind mount: an editor that replaces the file leaves Traefik on the
+old inode. Run `docker restart traefik` after editing it from Windows.
+
 Done when `https://code.fbns.eu` and `https://vscode.fbns.eu` open the login page from the laptop on
 the LAN, with a valid certificate, and Markdown preview works.
 
@@ -162,7 +165,7 @@ Done when, from the phone on mobile data: the file tree shows `~/projects`, the 
 `v24` for `node -v` and a version for `claude --version`, Markdown preview opens, and paste into the
 editor works.
 
-⏳ **9. Update [infra.md](../reference/infra.md).** Add a `code-server` subsection under Fedora:
+✅ **9. Update [infra.md](../reference/infra.md).** Add a `code-server` subsection under Fedora:
 URLs, config path, unit name, firewall rules, Credential Manager target, update command.
 
 ## Rollback

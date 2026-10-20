@@ -7,7 +7,7 @@ controllers. Estate map: [infra.md](docs/reference/infra.md).
 Operated **from here**: read, write, create, delete. No application code, no IaC, no service
 configuration: compose files live in `fbns-docker`.
 
-Store passwords and secrets in Windows Credential Manager, SSH keys in Bitwarden . Credential
+Store secrets in Windows Credential Manager, SSH keys, passwords/secrets in Bitwarden . Credential
 Manager target name: `<system>-<purpose>`.
 
 Name new files in `docs/plans/` and `docs/backlog/` `YYMMDD-<slug>.md`.

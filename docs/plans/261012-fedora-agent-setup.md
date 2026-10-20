@@ -8,61 +8,26 @@ Box: `ssh fedora` (`10.2.0.51`, user `attilafabian`), repos in `~/projects`. Det
 
 **Do not touch `overpass.service` or its port `12345` rule.** The box runs the paddle-map Overpass API.
 
-Safety comes from what the box can reach: no NAS access and no production MCP servers. GitHub is
-open by choice: the `gh` token stays broad (`repo`, `workflow`) and `main` is not protected, so the
-agent may edit anything on GitHub.
+Rules for the executing agent: the user runs every `sudo` step by hand. Stop and ask if the box
+differs from this plan.
 
-Rules for the executing agent:
+## Safety
 
-1. Step 1 is read-only. Report, then wait for approval.
-2. The user runs every `sudo` step by hand.
-3. Skip steps already done. Stop and ask if anything differs from this plan.
+The box has no NAS mounts or credentials, no private SSH keys, no secrets in env and no MCP servers
+(checked 2026-10-17). It cannot reach anything that matters except GitHub.
 
-## Part 1: Dev environment
+GitHub is open by choice: the `gh` token keeps scopes `repo`, `workflow`, `read:org`, `gist`, and
+`main` is not protected. Accepted risk: prompt injection from issues, PRs, web pages or docs can
+steer the agent to push or force-push to `main`, or to change Actions workflows and expose repo
+secrets. Git history and GitHub are the only recovery path.
 
-### Step 1: Check the box (read-only)
+## Steps
 
-```bash
-command -v tmux gh claude
-mount | grep -Ei 'cifs|nfs|fuse' ; grep -Ei 'cifs|nfs' /etc/fstab
-ls -la ~/.ssh ~/.config ~/.smbcredentials ~/.git-credentials ~/.netrc 2>/dev/null
-env | grep -iE 'token|secret|key|pass' | sed 's/=.*/=<set>/'
-claude mcp list
-ls ~/projects/*/.mcp.json 2>/dev/null
-gh auth status
-git config --global --get-regexp 'credential'
-grep -i env ~/.claude/settings.json 2>/dev/null
-```
+✅ **1. Check the box.** Clean, see Safety.
 
-Report as a short table: NAS mounts and credentials, secrets, production MCP servers, `gh` token
-scope.
+⏭️ **2. Remove write paths.** Nothing to remove.
 
-Findings (2026-10-17):
-
-| Check | Result |
-| --- | --- |
-| ✅ NAS mounts | No CIFS or NFS mounts, no `fstab` entries. `fusectl` and `rpc_pipefs` are kernel pseudo-filesystems. |
-| ✅ NAS credentials | No `~/.smbcredentials`, `~/.git-credentials` or `~/.netrc`. |
-| ✅ SSH keys | `~/.ssh` holds only `authorized_keys` and `known_hosts`. No private keys, so the box cannot SSH out. The laptop's `Host fedora` entry has no `ForwardAgent`. |
-| ✅ Secrets in env | Only `DEBUGINFOD_IMA_CERT_PATH`, a Fedora default. |
-| ✅ MCP servers | None at user level, no `~/projects/*/.mcp.json`. |
-| ✅ `~/.claude/settings.json` env | None. |
-| ⏭️ `gh` token | OAuth `gho_` token, scopes `repo`, `workflow`, `read:org`, `gist`. `git` authenticates through `gh auth git-credential`. Kept broad by choice. |
-| ✅ Tools | `tmux`, `gh` and `claude` installed. |
-
-Risk accepted with the broad token: prompt injection from issues, PRs, web pages or dependency
-docs can steer a YOLO agent, and the `workflow` scope can change Actions workflows and expose repo
-secrets. No branch protection on `main`, so the agent can push or force-push straight to it. Git
-history and GitHub are the only recovery path.
-
-### Step 2: Remove write paths
-
-⏭️ Nothing to do. Step 1 found no NAS mounts, credentials or MCP servers. The broad `gh` token and
-the unprotected `main` stay by choice.
-
-### Step 3: Persistent session
-
-`tmux` is already installed. From the laptop:
+⏳ **3. Persistent session.** `tmux` is installed. From the laptop:
 
 ```bash
 ssh -t fedora tmux new -A -s claude
@@ -70,19 +35,30 @@ ssh -t fedora tmux new -A -s claude
 cd ~/projects/<repo> && claude --dangerously-skip-permissions
 ```
 
-The session keeps running after you disconnect. The same `ssh` command reattaches it.
+Done when `git push` works from the box and the same `ssh` command reattaches the session.
 
-**Done when:** `git push` works from the box and the tmux session reattaches.
+⏳ **4. Phone via Remote Control.** In the Claude session run `/remote-control`, open it in the
+Claude app, and send a prompt that runs a harmless command. Done when it runs without a permission
+prompt.
 
-## Part 2: Mobile access
+⏳ **5. Phone via ConnectBot (fallback).** Generate a key in ConnectBot's pubkey manager and add it
+to `~/.ssh/authorized_keys`. Add one Mosh host per path, each with post-login automation
+`tmux new -A -s claude`:
 
-### Step 4: Remote Control
+| Path | Host |
+| --- | --- |
+| LAN or UniFi VPN | `attilafabian@10.2.0.51` |
+| NetBird | `attilafabian@fedora.netbird.cloud` (`100.110.35.178`) |
 
-1. In the Claude session, run `/remote-control`.
-2. Open the session in the Claude app on the phone.
-3. Send a prompt that runs a harmless command. It must run without a permission prompt.
+- Mosh survives Wi-Fi/4G switches and sleep. `mosh` is installed. It needs UDP `60000-61000` open
+  in zone `FedoraServer`. NetBird `wt0` has no zone (checked 2026-10-21), so its traffic falls into
+  the default zone `FedoraServer` and the same rule covers LAN, UniFi VPN and NetBird:
 
-Fallback: UniFi VPN plus Termius (`ssh -t fedora tmux new -A -s claude`), with Termius's own key in
-`~/.ssh/authorized_keys`.
+  ```bash
+  sudo firewall-cmd --permanent --zone=FedoraServer --add-service=mosh && sudo firewall-cmd --reload
+  ```
 
-**Done when:** the phone continues the same session and commands run without prompts.
+- NetBird has no LAN routing peer, so `10.2.0.51` does not work over NetBird. Install the NetBird
+  app on the phone and log in first.
+
+Done when a Mosh session reattaches the tmux session and survives a Wi-Fi to 4G switch.

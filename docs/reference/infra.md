@@ -87,8 +87,9 @@ Headless Fedora 43 server on the LAN. Runs Claude Code sessions, dev work and th
   `npm-24`, `npx-24`; `/usr/bin/node` stays 22. Symlinks `~/.local/bin/{node,npm,npx}` → `*-24` make
   v24 the default for `attilafabian` (first on `PATH`). systemd units do not read that `PATH`: call
   `/usr/bin/node-24` there. Remove the symlinks to fall back to 22.
-- firewalld zone `FedoraServer`. Only extra rule: TCP `12345` from `10.2.0.0/24`. Never forward it from
-  the router.
+- firewalld zone `FedoraServer` (also catches NetBird `wt0`, which has no zone). Extra rules: TCP
+  `12345` from `10.2.0.0/24`; TCP `8080` from `10.2.0.20` (Traefik) and `100.64.0.0/10` (NetBird).
+  Never forward either from the router.
 - LAN DNS (`10.2.0.22`/`.23`) has no `fedora` entry — use `fedora.local` or the IP.
 - ⏳ GitHub SSH from the box not set up (`git@github.com` host key unknown, no key).
 
@@ -99,6 +100,18 @@ Headless Fedora 43 server on the LAN. Runs Claude Code sessions, dev work and th
 `~/overpass/db`, rebuilt by `~/overpass/refresh.sh` (service is down during a rebuild). Setup and
 reasons: [paddle-map `docs/plans/260925-own-overpass.md`](../../../paddle-map/docs/plans/260925-own-overpass.md).
 On the box use `127.0.0.1`, not `localhost` (rootless Podman forwards IPv4 only).
+
+### code-server
+
+VS Code in the browser on `~/projects`, terminal on the host. LAN: `https://code.fbns.eu` and
+`https://vscode.fbns.eu` (NAS Traefik file route `code-server`, `lan-only`). NetBird:
+`http://fedora.netbird.cloud:8080` (phone Chrome needs the `unsafely-treat-insecure-origin-as-secure`
+flag). Standalone install in `~/.local/lib/code-server-*`, user unit `code-server.service`, config
+`~/.config/code-server/config.yaml` (`bind-addr: 0.0.0.0:8080`, password auth). Password: Credential
+Manager `fedora-code-server`, Bitwarden `fedora-code-server`. Update: rerun
+`curl -fsSL https://code-server.dev/install.sh | sh -s -- --method=standalone`, then
+`systemctl --user restart code-server`. Setup and rollback:
+[261021-fedora-code-server.md](../plans/261021-fedora-code-server.md).
 
 ### GitHub Actions runner (E29eu)
 
