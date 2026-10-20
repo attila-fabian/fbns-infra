@@ -15,19 +15,20 @@ Rules for the executing agent:
 
 Two kinds of peer:
 
-- **Client peers** run the NetBird app and log in with SSO: laptop, phone, Fedora.
+- **Client peers** run the NetBird client: laptop and phone (SSO), Fedora and the FBNS NAS (setup
+  key).
 - **One routing peer** inside the LAN advertises `10.2.0.0/24` as a NetBird Network. Devices that
-  cannot run a client (Fibaro, UniFi gear, printers) or should not (NAS, Proxmox host, Home
-  Assistant) stay untouched and are reached through it.
+  cannot run a client (Fibaro, UniFi gear, printers) or should not (Proxmox host, Home Assistant)
+  stay untouched and are reached through it.
 
-No client on the Synology NAS, the Proxmox host or Home Assistant: the routing peer covers them, and
-each extra client is one more root daemon to patch. Add one only if a device must be reachable when
-the LAN routing peer is down.
+Fedora and the NAS get their own client so they stay reachable when Proxmox or `netbird-gw` is
+down. No client on the Proxmox host or Home Assistant: each extra client is one more root daemon to
+patch.
 
-If a Synology NAS ever needs its own client, NetBird's documented method is SSH plus
-`curl -fsSL https://pkgs.netbird.io/install.sh | sudo sh`, then `netbird up --setup-key <SETUP KEY>`.
-Add a DSM Task Scheduler boot task (user `root`, event Boot-up) because some models lose the `tun`
-module on reboot:
+The NAS client runs in Docker (`fbns-docker/netbird/compose.yaml`), not via `install.sh`: a DSM
+update can wipe a native install, and the image updates like every other service. If `/dev/net/tun`
+is missing after a reboot, add a DSM Task Scheduler boot task (user `root`, event Boot-up). Some
+models lose the `tun` module on reboot:
 
 ```sh
 if [ ! -c /dev/net/tun ]; then
@@ -39,8 +40,8 @@ lsmod | grep -q '^tun ' || insmod /lib/modules/tun.ko
 ```
 
 Some Synology kernels lack netfilter `mark` and `ipset`. The client then logs `failed to create
-native firewall` and falls back to userspace filtering. Update with `./install.sh --update`, not
-DSM.
+native firewall` and falls back to userspace filtering. DSM has no WireGuard kernel module, so the
+NAS peer runs userspace WireGuard.
 
 Routing peer host: a small Debian LXC on Proxmox (`netbird-gw`). It is always on and keeps the VPN
 off the Fedora YOLO box, which should not be the gateway into the LAN.
@@ -75,32 +76,49 @@ before the install do not have it on `PATH`.
 The routing peer already reaches Fedora at `10.2.0.51`. Its own client keeps SSH working when
 Proxmox or `netbird-gw` is down.
 
-Use the official DNF repo, not `install.sh`: `dnf upgrade` then keeps the client current. Use a
-setup key, not SSO: setup-key peers have no login expiry, so the headless box does not drop off
-every 30 days.
+Use a setup key, not SSO: setup-key peers have no login expiry, so the headless box does not drop
+off every 30 days.
 
-1. ⏳ Dashboard, **Setup Keys**: create a one-off key, expiry 1 day.
-2. ⏳ User runs on Fedora:
+1. ✅ Dashboard, **Setup Keys**: create a one-off key, expiry 1 day.
+2. ✅ User runs on Fedora:
 
    ```bash
-   sudo tee /etc/yum.repos.d/netbird.repo <<'EOF'
-   [netbird]
-   name=netbird
-   baseurl=https://pkgs.netbird.io/yum/
-   enabled=1
-   gpgcheck=1
-   gpgkey=https://pkgs.netbird.io/yum/repodata/repomd.xml.key
-   repo_gpgcheck=1
-   EOF
-   sudo dnf install -y netbird
-   sudo systemctl enable --now netbird || { sudo netbird service install && sudo netbird service start; }
-   sudo netbird up --setup-key <SETUP KEY>
-   netbird status
+   curl -fsSL https://pkgs.netbird.io/install.sh | sh
+   netbird up --setup-key <SETUP KEY>
    ```
+
+   `install.sh` adds the DNF repo (`/etc/yum.repos.d/netbird.repo`, GPG checks on), installs the
+   `netbird` RPM and enables `netbird.service`, so `dnf upgrade` keeps the client current.
 
 Do not touch `overpass.service` or the firewalld `12345` rule.
 
 **Done when:** `ssh` to Fedora works over its NetBird IP (`100.x.y.z`) from the laptop.
+
+✅ 2026-10-19: client `0.81.3` from the DNF repo, peer `fedora.netbird.cloud`, NetBird IP
+`100.110.35.178`, kernel WireGuard. `ssh attilafabian@100.110.35.178` from the laptop works.
+
+### Step 4b: FBNS NAS (Docker)
+
+Not the dashboard's `docker run` line: it runs on the bridge network, so the peer's NetBird IP
+reaches the container, not DSM or SMB.
+
+1. ✅ `Y:\netbird\compose.yaml` (host network, `/dev/net/tun`, state in `./data`) and
+   `.env.example`.
+2. ⏭️ 2026-10-20: no `netbirdio/netbird` container on the NAS. If the dashboard's `docker run` was already started: `sudo docker ps -a --filter
+   ancestor=netbirdio/netbird`, then `sudo docker rm -f <id>`, and delete that peer in the
+   dashboard. Its setup key is used up.
+3. ⏳ Dashboard, **Setup Keys**: create a one-off key, expiry 1 day. Put it in `Y:\netbird\.env`
+   as `NB_SETUP_KEY=<SETUP KEY>`.
+4. ⏳ User runs on the NAS:
+
+   ```bash
+   cd /volume1/docker/netbird && sudo docker compose up -d
+   sudo docker exec netbird netbird status
+   ```
+
+5. ⏳ After `Management: Connected`, clear the key from `.env`. `./data` holds the peer state.
+
+**Done when:** from the laptop, `https://<NAS NetBird IP>` opens DSM.
 
 ### Step 5: Routing peer
 

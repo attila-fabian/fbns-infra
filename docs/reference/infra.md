@@ -19,6 +19,21 @@ Synology NAS. Docker host for `*.fbns.eu`.
 
 `Y:` = `\FBNS\docker` = `/volume1/docker` — same files over SMB and SSH.
 
+- **Docker needs `sudo`.** `/var/run/docker.sock` is `root:root`; the user runs `sudo docker ...` on
+  request. Agents read container state from Dozzle instead (`http://10.2.0.6:8888`, LAN, no auth,
+  read-only). Container list from its SSE stream:
+
+  ```bash
+  python -c "
+  import json,urllib.request
+  for l in urllib.request.urlopen('http://10.2.0.6:8888/api/events/stream',timeout=5):
+      if l.startswith(b'data: '):
+          for c in sorted(json.loads(l[6:]),key=lambda c:c['name']): print(f\"{c['name']:26}{c['state']:10}{c['image']}\")
+          break"
+  ```
+
+  Dockhand (`:3000`) has auth on and is not used by agents.
+
 ## Fedora
 
 Headless Fedora 43 server on the LAN. Runs Claude Code sessions, dev work and the paddle-map Overpass API.
