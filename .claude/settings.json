@@ -1,3 +1,8 @@
 {
-  "plansDirectory": "docs/plans"
+  "plansDirectory": "docs/plans",
+  "enabledPlugins": {
+    "e29-core@synced": false,
+    "e29-pm@synced": false,
+    "e29-pm@e29-pm": false
+  }
 }
